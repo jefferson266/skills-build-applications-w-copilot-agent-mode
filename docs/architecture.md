@@ -28,22 +28,23 @@ OctoFit Tracker is a three-tier application for a school fitness program. The st
 
 ## Implementation decisions
 
-Record your plan here before editing code.
-
-- Presentation tier decision:
-- Logic tier decision:
-- Data tier decision:
-- Activity tracking approach:
-- Team management approach:
-- Leaderboard approach:
-- Workout suggestions approach:
+- Presentation tier decision: Keep route views focused on rendering and user interaction. Load and submit data through the shared API client, and provide accessible loading, error, and empty states without calling `fetch` directly from components.
+- Logic tier decision: Keep HTTP parsing and response status handling in Express routes, with validation, calculations, and database queries in the service layer. Return deliberate 4xx responses for invalid or unknown input, and do not add authentication in this exercise.
+- Data tier decision: Define required fields and relationships in the four Mongoose models, using ObjectId references for users, teams, and activities. Seed representative users, teams, activities, and workouts with idempotent upserts that preserve unrelated records.
+- Activity tracking approach: Validate activity type, positive minutes, and well-formed IDs for existing users and teams before writing. Store the user and team references, submitted activity details, server-computed points, and an occurrence timestamp; translate invalid IDs into a deliberate 4xx rather than exposing cast errors.
+- Team management approach: Require a non-empty name and mascot, accept an optional list of existing user members, and return created and listed teams with their submitted names, mascots, and members.
+- Leaderboard approach: Sum activity points by team in the logic tier, sort totals from highest to lowest, and return each team's name, total points, and 1-based rank.
+- Workout suggestions approach: Find the user by email, use the user's fitness goal and recent activities to choose relevant seeded workouts, and include a reason for the recommendation. Return a deliberate 4xx when no user matches.
 
 ## Test plan
 
-Record the commands you run and what each failure means.
+Run the contract checks in data, API, then presentation order; run both builds after the contracts pass. A failing contract identifies a behavior that must be fixed in its owning tier before proceeding.
 
-- Data-tier command: `npm run test:data --prefix octofit-tracker/backend`
-- API command: `npm run test:api --prefix octofit-tracker/backend`
-- Frontend command: `npm test --prefix octofit-tracker/frontend`
-- Backend build command: `npm run build --prefix octofit-tracker/backend`
-- Frontend build command: `npm run build --prefix octofit-tracker/frontend`
+- Data tier: `npm run test:data --prefix octofit-tracker/backend` checks required model fields, references, and repeatable seeding. Failures point to schemas or seed behavior.
+- Logic tier: `npm run test:api --prefix octofit-tracker/backend` checks activity and team validation/creation, leaderboard aggregation, and activity-based workout suggestions. Failures point to route/service behavior or its data queries.
+- Presentation tier: `npm test --prefix octofit-tracker/frontend` checks API-backed rendering, route-specific requests, and accessible loading, empty, and error states. Failures point to component behavior or shared-client integration.
+- Backend build: `npm run build --prefix octofit-tracker/backend` runs the TypeScript check; failures indicate backend type or module errors.
+- Frontend build: `npm run build --prefix octofit-tracker/frontend` runs the TypeScript check and Vite production build; failures indicate frontend type or bundling errors.
+- Supplemental exercise guard: `node --test tests/exercise-validation.test.mjs` checks repository exercise metadata and validator behavior, not the three application tiers.
+
+Baseline on 2026-10-29: data contracts had 4 failures and 1 pass; API contracts had 4 failures; frontend contracts had 15 failures. Both builds passed. The supplemental exercise guard had 36 passes and 4 failures involving the README badge contract, toolkit checkout pinning, and block-scalar validation cases; track these separately from application contract work.
